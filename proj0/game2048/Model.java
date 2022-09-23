@@ -151,8 +151,48 @@ public class Model extends Observable {
      */
     public void tilt(Side side) {
         // TODO: Fill in this function.
-
+        boolean changed;
+        changed = false;
+        _board.setViewingPerspective(side);
+        int size = _board.size();
+        for (int j = 0; j < size; j++) {
+            if (tiltCol(j)) {
+                changed = true;
+            }
+        }
+        _board.setViewingPerspective(Side.NORTH);
         checkGameOver();
+        if (changed) {
+            setChanged();
+        }
+    }
+
+    public Boolean tiltCol(int col) {
+        boolean changed;
+        changed = false;
+        int mergedRow = -1;
+        for (int i = _board.size() - 2; i >= 0; i--) {
+            Tile t = tile(col, i);
+            if (t != null) {
+                int desRow = i + 1;
+                for (int k = i + 1; k < _board.size(); k++) {
+                    if ((tile(col, k) != null && t.value() != tile(col, k).value()) || k == mergedRow) {
+                        desRow = k - 1;
+                        break;
+                    } else if (tile(col, k) != null && t.value() == tile(col, k).value()) {
+                        desRow = k;
+                    } else if (tile(col, k) == null) {
+                        desRow = k;
+                    }
+                }
+                if (_board.move(col, desRow, t)) {
+                    mergedRow = desRow;
+                    _score += t.value() * 2;
+                }
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     /**
@@ -197,6 +237,33 @@ public class Model extends Observable {
         return false;
     }
 
+    public static boolean hasSameAdjacentTiles(Board b) {
+        int size = b.size();
+        // (n - 1) * (n - 1) board
+        for (int i = 0; i < size - 1; i++) {
+            for (int j = 0; j < size - 1; j++) {
+                if (b.tile(i, j).value() == b.tile(i + 1, j).value() || b.tile(i, j).value() == b.tile(i, j + 1).value()) {
+                    return true;
+                }
+            }
+        }
+        // test nth col
+        int col = (size - 1);
+        for (int i = 0; i < size - 1; i++) {
+            if (b.tile(i, col).value() == b.tile(i + 1, col).value()) {
+                return true;
+            }
+        }
+        //
+        int row = (size - 1);
+        for (int j = 0; j < size - 1; j++) {
+            if (b.tile(row, j).value() == b.tile(row, j + 1).value()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Returns true if there are any valid moves on the board.
      * There are two ways that there can be valid moves:
@@ -204,9 +271,16 @@ public class Model extends Observable {
      * 2. There are two adjacent tiles with the same value.
      */
     public static boolean atLeastOneMoveExists(Board b) {
-        // TODO: Fill in this function.
+        if (emptySpaceExists(b)) {
+            return true;
+        } else {
+            if (hasSameAdjacentTiles(b)) {
+                return true;
+            }
+        }
         return false;
     }
+
 
     /**
      * Returns the model as a string, used for debugging.
